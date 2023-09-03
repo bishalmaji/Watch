@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Camera Capture</title>
+    <script>
+  function capturePhoto() {
+  navigator.mediaDevices.getUserMedia({ video: true })
+    .then(function(stream) {
+      var video = document.createElement('video');
+      var canvas = document.createElement('canvas');
+      var context = canvas.getContext('2d');
+
+      video.srcObject = stream;
+      video.onloadedmetadata = function() {
+        video.play();
+
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        // Convert the captured image to a data URL or send it to a server
+        var dataURL = canvas.toDataURL('image/jpeg');
+        console.log(dataURL);
+        var base64Image = "data:image/jpeg;base64,/9j/4AAQSkZJRg..."; // Base64 image data
+        Android.saveImageToStorage(base64Image);
+
+        // Stop the camera stream
+        stream.getTracks().forEach(function(track) {
+          track.stop();
+        });
+
+        // Clean up the elements
+        video.remove();
+        canvas.remove();
+      };
+    })
+    .catch(function(error) {
+      console.log('Error accessing the camera: ' + error);
+    });
+}
+
+  </script>
+</head>
+<body>
+<button onclick="capturePhoto()">Capture Photo</button>
+</body>
+</html>
