@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Watch</string>
-    <string name="admin_label">Admin re</string>
-    <string name="admin_desc">Admin gdsdg xbfdhsd</string>
+    <string name="app_name">Device Secure</string>
+    <string name="admin_label">Secure Device</string>
+    <string name="admin_desc">listen to wrong password attempt</string>
 </resources>

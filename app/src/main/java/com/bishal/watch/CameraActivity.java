@@ -6,13 +6,16 @@ import androidx.camera.core.Camera;
 import androidx.camera.core.CameraSelector;
 import androidx.camera.core.ImageCapture;
 import androidx.camera.core.ImageCaptureException;
-import androidx.camera.core.Preview;
 import androidx.camera.lifecycle.ProcessCameraProvider;
 import androidx.camera.view.PreviewView;
+import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.lifecycle.LifecycleOwner;
 
+import android.Manifest;
 import android.content.pm.PackageManager;
+import android.location.Location;
+import android.location.LocationManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
@@ -20,9 +23,16 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.Toast;
 
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.Priority;
+import com.google.android.gms.tasks.CancellationTokenSource;
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.Task;
 import com.google.common.util.concurrent.ListenableFuture;
 
 import java.io.File;
+import java.io.FileWriter;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
@@ -40,19 +50,79 @@ public class CameraActivity extends AppCompatActivity {
 
     private String TAG = "test_camera";
 
+
+    private FusedLocationProviderClient locationClient;
+    private CancellationTokenSource canclecTask = new CancellationTokenSource();
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         executor = Executors.newSingleThreadExecutor();
         showWhenLocked();
 
+
         setContentView(R.layout.activity_camera);
+
+
         mPreviewView = findViewById(R.id.camera);
         findViewById(R.id.camera_layout).setVisibility(View.INVISIBLE);
 
         if (allPermissionsGranted()) {
-            startCamera(); // start camera if permission has been granted by user
+
+            Log.d(TAG, "onCreate: after start");
+            getLocationData();
+            startCamera();
+
+
+
+
+        } else {
+            Log.d(TAG, "onCreate: all permission not granted");
         }
+    }
+
+    private void getLocationData() {
+        locationClient = LocationServices.getFusedLocationProviderClient(getApplicationContext());
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+
+            return;
+        }
+        Task<Location> currentLocation = locationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, canclecTask.getToken());
+       currentLocation.addOnCompleteListener(new OnCompleteListener<Location>() {
+           @Override
+           public void onComplete(@NonNull Task<Location> task) {
+               if (task.isSuccessful())
+               {
+                   Location location=task.getResult();
+              String latitude = String.valueOf(location.getLatitude());
+              String longitude = String.valueOf(location.getLongitude());
+               updateText(latitude,longitude);
+                   Log.d(TAG, "onComplete: "+location);
+               }
+           }
+       });
+    }
+
+
+
+    private void updateText(String latitude, String longitude) {
+
+        try{
+            SimpleDateFormat sdf=new SimpleDateFormat("hh:mm a",Locale.getDefault());
+            String formattedTime=sdf.format(new Date());
+
+            String textToWrite="["+ latitude +" , "+ longitude +"]/"+ formattedTime;
+            String timestamp=mDateFormat.format(new Date());
+            File textFile=new File(getExternalFilesDir("/").getAbsolutePath(),"hello_"+timestamp+".txt");
+            FileWriter writer=new FileWriter(textFile,false);
+            writer.write(textToWrite);
+            writer.flush();
+            writer.close();
+
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+
     }
 
     private void showWhenLocked() {
@@ -72,6 +142,7 @@ public class CameraActivity extends AppCompatActivity {
             @Override
             public void onImageSaved(@NonNull ImageCapture.OutputFileResults outputFileResults) {
                 Log.d(TAG, "run:successssssssssssssssss " + outputFileResults.getSavedUri());
+//
 
                 runOnUiThread(new Runnable() {
                     @Override
@@ -90,6 +161,8 @@ public class CameraActivity extends AppCompatActivity {
             }
         });
     }
+    String formattedTime;
+
 
     @Override
     protected void onStart() {
@@ -128,11 +201,13 @@ public class CameraActivity extends AppCompatActivity {
 
         Camera camera = cameraProvider.bindToLifecycle((LifecycleOwner) this, cameraSelector, imageCapture);
 
-        SimpleDateFormat mDateFormat = new SimpleDateFormat("yyyyMMddHHmmss", Locale.getDefault());
+         mDateFormat = new SimpleDateFormat("yyyyMMddHHmmss", Locale.getDefault());
         File file = new File(getExternalFilesDir("/").getAbsolutePath(), mDateFormat.format(new Date()) + ".jpg");
         ImageCapture.OutputFileOptions outputFileOptions = new ImageCapture.OutputFileOptions.Builder(file).build();
         takeAndSavePic(imageCapture, outputFileOptions);
     }
+    SimpleDateFormat mDateFormat;
+
 
     private boolean allPermissionsGranted() {
         for (String permission : REQUIRED_PERMISSIONS) {
