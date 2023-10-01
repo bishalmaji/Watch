@@ -11,7 +11,7 @@ import androidx.camera.view.PreviewView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.lifecycle.LifecycleOwner;
-
+//
 import android.Manifest;
 import android.content.pm.PackageManager;
 import android.location.Location;
